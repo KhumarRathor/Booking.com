@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Booking.com Clone with Advanced Features</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+    .speech-btn.active {
+      background-color: #ef4444;
+      color: white;
+    }
+    .comparison-table th, .comparison-table td {
+      border: 1px solid #e5e7eb;
+      padding: 0.75rem;
+    }
+    .itinerary-item {
+      transition: all 0.2s ease;
+    }
+    .itinerary-item.dragging {
+      opacity: 0.5;
+      background-color: #f3f4f6;
+    }
+    .price-history-chart {
+      height: 200px;
+    }
+    /* Chatbot styles */
+    #chatbot-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+    #chatbot-container.collapsed {
+      height: 60px;
+      overflow: hidden;
+    }
+    #chatbot-header {
+      background-color: #1e40af;
+      color: white;
+      padding: 12px 15px;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #chatbot-body {
+      background-color: white;
+      height: 400px;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+    #chatbot-messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    .chatbot-message {
+      margin-bottom: 10px;
+      display: flex;
+    }
+    .chatbot-message.bot {
+      justify-content: flex-start;
+    }
+    .chatbot-message.user {
+      justify-content: flex-end;
+    }
+    .message-content {
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 18px;
+    }
+    .bot .message-content {
+      background-color: #f3f4f6;
+      color: #111827;
+    }
+    .user .message-content {
+      background-color: #1e40af;
+      color: white;
+    }
+    #chatbot-input {
+      padding: 10px 15px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+    }
+    #chatbot-input input {
+      flex: 1;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      padding: 8px 15px;
+      outline: none;
+    }
+    #chatbot-input button {
+      background-color: #1e40af;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    #chatbot-toggle {
+      background-color: #1e40af;
+      color: white;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .chatbot-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: #3b82f6;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-right: 8px;
+    }
+    .quick-replies {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .quick-reply {
+      background-color: #e0e7ff;
+      color: #1e40af;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .quick-reply:hover {
+      background-color: #d1d8f0;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Header -->
+  <header class="bg-blue-900 text-white sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+      <a class="flex items-center space-x-2" href="#">
+        <img alt="Booking.com logo" class="w-10 h-10" src="https://storage.googleapis.com/a1aa/image/4d51d2f0-64e6-4ec3-c35d-11785f914eb8.jpg"/>
+        <span class="text-2xl font-bold tracking-wide">Booking.com</span>
+      </a>
+      <nav class="hidden md:flex space-x-6 text-sm font-semibold">
+        <a class="hover:underline" href="#">Stays</a>
+        <a class="hover:underline" href="#">Flights</a>
+        <a class="hover:underline" href="#">Car Rentals</a>
+        <a class="hover:underline" href="#">Attractions</a>
+        <a class="hover:underline" href="#">Airport Taxis</a>
+      </nav>
+      <div class="hidden md:flex items-center space-x-6">
+        <div class="relative">
+          <button aria-expanded="false" aria-haspopup="listbox" class="flex items-center space-x-1 bg-blue-800 hover:bg-blue-700 rounded-md px-3 py-1 focus:outline-none" id="country-button">
+            <img alt="India flag" class="w-5 h-5 rounded-sm" id="country-flag" src="https://flagcdn.com/w20/in.png"/>
+            <span class="text-sm" id="country-label">India</span>
+            <i class="fas fa-chevron-down text-xs ml-1"></i>
+          </button>
+          <ul class="absolute z-50 mt-1 w-48 bg-white text-gray-900 rounded-md shadow-lg max-h-60 overflow-auto hidden" id="country-list">
+            <li class="cursor-pointer py-2 pl-3 pr-9 hover:bg-blue-100 flex items-center" data-code="US" data-flag="https://flagcdn.com/w20/us.png" data-name="United States">
+              <img alt="US flag" class="w-5 h-5 rounded-sm mr-2" src="https://flagcdn.com/w20/us.png"/>
+              United States
+            </li>
+            <li class="cursor-pointer py-2 pl-3 pr-9 hover:bg-blue-100 flex items-center" data-code="GB" data-flag="https://flagcdn.com/w20/gb.png" data-name="United Kingdom">
+              <img alt="UK flag" class="w-5 h-5 rounded-sm mr-2" src="https://flagcdn.com/w20/gb.png"/>
+              United Kingdom
+            </li>
+            <li class="cursor-pointer py-2 pl-3 pr-9 hover:bg-blue-100 flex items-center" data-code="IN" data-flag="https://flagcdn.com/w20/in.png" data-name="India">
+              <img alt="India flag" class="w-5 h-5 rounded-sm mr-2" src="https://flagcdn.com/w20/in.png"/>
+              India
+              <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                <i class="fas fa-check"></i>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <div class="relative">
+          <button aria-expanded="false" aria-haspopup="listbox" class="flex items-center space-x-1 bg-blue-800 hover:bg-blue-700 rounded-md px-3 py-1 focus:outline-none" id="currency-button">
+            <span class="text-sm" id="currency-label">INR</span>
+            <i class="fas fa-chevron-down text-xs ml-1"></i>
+          </button>
+          <ul class="absolute z-50 mt-1 w-32 bg-white text-gray-900 rounded-md shadow-lg max-h-60 overflow-auto hidden" id="currency-list">
+            <li class="cursor-pointer py-2 pl-3 pr-9 hover:bg-blue-100" data-code="USD">USD</li>
+            <li class="cursor-pointer py-2 pl-3 pr-9 hover:bg-blue-100" data-code="EUR">EUR</li>
+            <li class="cursor-pointer py-2 pl-3 pr-9 hover:bg-blue-100" data-code="INR">
+              INR
+              <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                <i class="fas fa-check"></i>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <button class="hover:underline">Register</button>
+        <button class="hover:underline">Sign in</button>
+      </div>
+      <button aria-label="Open menu" class="md:hidden focus:outline-none" id="mobile-menu-button">
+        <i class="fas fa-bars text-xl"></i>
+      </button>
+    </div>
+    <!-- Mobile menu -->
+    <nav class="md:hidden bg-blue-800 text-white px-4 pt-2 pb-4 space-y-2 hidden" id="mobile-menu">
+      <a class="block py-1 hover:underline" href="#">Stays</a>
+      <a class="block py-1 hover:underline" href="#">Flights</a>
+      <a class="block py-1 hover:underline" href="#">Car Rentals</a>
+      <a class="block py-1 hover:underline" href="#">Attractions</a>
+      <a class="block py-1 hover:underline" href="#">Airport Taxis</a>
+      <div class="border-t border-blue-700 mt-2 pt-2 flex flex-col space-y-2">
+        <div>
+          <label class="block text-sm font-semibold mb-1" for="mobile-country-select">Country</label>
+          <select class="w-full rounded-md px-3 py-2 text-gray-900" id="mobile-country-select">
+            <option value="US">United States</option>
+            <option value="GB">United Kingdom</option>
+            <option selected value="IN">India</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1" for="mobile-currency-select">Currency</label>
+          <select class="w-full rounded-md px-3 py-2 text-gray-900" id="mobile-currency-select">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option selected value="INR">INR</option>
+          </select>
+        </div>
+        <div class="flex space-x-4">
+          <button class="flex-1 text-left hover:underline">Register</button>
+          <button class="flex-1 text-left hover:underline">Sign in</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Hero Section with Voice Search -->
+  <section class="bg-blue-900 text-white py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-4xl sm:text-5xl font-extrabold mb-4">Find your next stay</h1>
+      <p class="text-lg sm:text-xl max-w-2xl mb-8">Search deals on hotels, homes, and much more...</p>
+      
+      <!-- Search Form with Voice Search -->
+      <form class="bg-white rounded-lg p-4 shadow-lg max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-4 gap-4 text-gray-900">
+        <div class="flex flex-col relative">
+          <label class="font-semibold mb-1" for="destination">Destination:</label>
+          <div class="relative">
+            <input class="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                   id="destination" placeholder="Where are you going?" type="text"/>
+            <button type="button" id="voice-search-btn" class="absolute right-3 top-2 text-gray-500 hover:text-blue-600">
+              <i class="fas fa-microphone"></i>
+            </button>
+          </div>
+          <div id="voice-status" class="text-xs text-gray-500 mt-1 hidden"></div>
+        </div>
+        <div class="flex flex-col">
+          <label class="font-semibold mb-1" for="checkin">Check-in</label>
+          <input class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" id="checkin" type="date"/>
+        </div>
+        <div class="flex flex-col">
+          <label class="font-semibold mb-1" for="checkout">Check-out</label>
+          <input class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" id="checkout" type="date"/>
+        </div>
+        <div class="flex flex-col">
+          <label class="font-semibold mb-1" for="guests">Guests</label>
+          <select class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600" id="guests">
+            <option value="1">1 guest</option>
+            <option value="2">2 guests</option>
+            <option value="3">3 guests</option>
+            <option value="4">4 guests</option>
+          </select>
+        </div>
+        <div class="sm:col-span-4 flex justify-center mt-2 sm:mt-0">
+          <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md px-6 py-3 w-full sm:w-auto flex items-center justify-center space-x-2" type="submit">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- AI Recommendations Section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Recommended for you</h2>
+      <button id="refresh-recommendations" class="text-blue-600 hover:text-blue-800 flex items-center">
+        <i class="fas fa-sync-alt mr-2"></i>
+        Refresh
+      </button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="ai-recommendations">
+      <!-- AI recommendations will be loaded here -->
+    </div>
+  </section>
+
+  <!-- Trip Cost Calculator -->
+  <section class="bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <h2 class="text-2xl font-bold mb-6 text-gray-900">Trip Cost Calculator</h2>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Trip Details</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="trip-destination">Destination</label>
+                <input class="w-full border border-gray-300 rounded-md px-3 py-2" id="trip-destination" type="text" value="Goa, India"/>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="trip-checkin">Check-in</label>
+                  <input class="w-full border border-gray-300 rounded-md px-3 py-2" id="trip-checkin" type="date"/>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="trip-checkout">Check-out</label>
+                  <input class="w-full border border-gray-300 rounded-md px-3 py-2" id="trip-checkout" type="date"/>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="trip-guests">Travelers</label>
+                <select class="w-full border border-gray-300 rounded-md px-3 py-2" id="trip-guests">
+                  <option value="1">1 traveler</option>
+                  <option value="2" selected>2 travelers</option>
+                  <option value="3">3 travelers</option>
+                  <option value="4">4 travelers</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Cost Breakdown</h3>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="space-y-3">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Accommodation (5 nights)</span>
+                  <span class="font-medium">₹25,000</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Flights (round trip)</span>
+                  <span class="font-medium">₹12,000</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Food & Dining</span>
+                  <span class="font-medium">₹8,000</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Activities</span>
+                  <span class="font-medium">₹5,000</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Transportation</span>
+                  <span class="font-medium">₹3,000</span>
+                </div>
+                <div class="border-t border-gray-200 pt-2 mt-2">
+                  <div class="flex justify-between font-semibold">
+                    <span>Total Estimated Cost</span>
+                    <span>₹53,000</span>
+                  </div>
+                </div>
+              </div>
+              <button class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                Save This Trip
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Smart Itinerary Builder -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h2 class="text-2xl font-bold mb-6 text-gray-900">Your Trip Itinerary</h2>
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-semibold">Goa Trip - 5 Days</h3>
+          <button class="text-blue-600 hover:text-blue-800 flex items-center">
+            <i class="fas fa-plus-circle mr-2"></i>
+            Add Activity
+          </button>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-200" id="itinerary-container">
+        <!-- Day 1 -->
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h4 class="font-medium text-lg">Day 1: Arrival in Goa</h4>
+            <span class="text-sm text-gray-500">June 15, 2024</span>
+          </div>
+          <div class="space-y-3">
+            <div class="itinerary-item bg-gray-50 rounded-lg p-4 flex items-start cursor-move" draggable="true">
+              <div class="mr-4 text-gray-400">
+                <i class="fas fa-grip-vertical"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between">
+                  <h5 class="font-medium">Airport Transfer to Hotel</h5>
+                  <span class="text-sm text-gray-500">2:00 PM - 3:00 PM</span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">Private taxi from Goa International Airport to The Leela Goa</p>
+              </div>
+            </div>
+            <div class="itinerary-item bg-gray-50 rounded-lg p-4 flex items-start cursor-move" draggable="true">
+              <div class="mr-4 text-gray-400">
+                <i class="fas fa-grip-vertical"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between">
+                  <h5 class="font-medium">Check-in at The Leela Goa</h5>
+                  <span class="text-sm text-gray-500">3:30 PM</span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">Luxury beachfront resort with spa and pools</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Day 2 -->
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h4 class="font-medium text-lg">Day 2: Beach Day</h4>
+            <span class="text-sm text-gray-500">June 16, 2024</span>
+          </div>
+          <div class="space-y-3">
+            <div class="itinerary-item bg-gray-50 rounded-lg p-4 flex items-start cursor-move" draggable="true">
+              <div class="mr-4 text-gray-400">
+                <i class="fas fa-grip-vertical"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between">
+                  <h5 class="font-medium">Breakfast at Resort</h5>
+                  <span class="text-sm text-gray-500">8:00 AM - 10:00 AM</span>
+                </div>
+              </div>
+            </div>
+            <div class="itinerary-item bg-gray-50 rounded-lg p-4 flex items-start cursor-move" draggable="true">
+              <div class="mr-4 text-gray-400">
+                <i class="fas fa-grip-vertical"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between">
+                  <h5 class="font-medium">Visit Calangute Beach</h5>
+                  <span class="text-sm text-gray-500">10:30 AM - 4:00 PM</span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">Famous beach with water sports and shacks</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 bg-gray-50">
+        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+          Save Itinerary
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Room Comparison Tool -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-white">
+    <h2 class="text-2xl font-bold mb-6 text-gray-900">Compare Rooms</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full comparison-table">
+        <thead>
+          <tr class="bg-gray-100">
+            <th class="text-left py-3 px-4">Room Type</th>
+            <th class="text-left py-3 px-4">Deluxe Room</th>
+            <th class="text-left py-3 px-4">Executive Suite</th>
+            <th class="text-left py-3 px-4">Presidential Suite</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr>
+            <td class="py-3 px-4 font-medium">Price per night</td>
+            <td class="py-3 px-4">₹8,500</td>
+            <td class="py-3 px-4">₹12,000</td>
+            <td class="py-3 px-4">₹25,000</td>
+          </tr>
+          <tr class="bg-gray-50">
+            <td class="py-3 px-4 font-medium">Size</td>
+            <td class="py-3 px-4">350 sq ft</td>
+            <td class="py-3 px-4">550 sq ft</td>
+            <td class="py-3 px-4">1,200 sq ft</td>
+          </tr>
+          <tr>
+            <td class="py-3 px-4 font-medium">View</td>
+            <td class="py-3 px-4">Garden View</td>
+            <td class="py-3 px-4">Partial Sea View</td>
+            <td class="py-3 px-4">Panoramic Ocean View</td>
+          </tr>
+          <tr class="bg-gray-50">
+            <td class="py-3 px-4 font-medium">Bed Type</td>
+            <td class="py-3 px-4">1 King Bed</td>
+            <td class="py-3 px-4">1 King Bed + Sofa Bed</td>
+            <td class="py-3 px-4">1 King Bed + 2 Queen Beds</td>
+          </tr>
+          <tr>
+            <td class="py-3 px-4 font-medium">Cancellation Policy</td>
+            <td class="py-3 px-4">Free cancellation</td>
+            <td class="py-3 px-4">Free cancellation</td>
+            <td class="py-3 px-4">Non-refundable</td>
+          </tr>
+          <tr class="bg-gray-50">
+            <td class="py-3 px-4 font-medium">Amenities</td>
+            <td class="py-3 px-4">
+              <ul class="list-disc list-inside space-y-1">
+                <li class="text-sm">Air conditioning</li>
+                <li class="text-sm">Free WiFi</li>
+                <li class="text-sm">Mini-bar</li>
+              </ul>
+            </td>
+            <td class="py-3 px-4">
+              <ul class="list-disc list-inside space-y-1">
+                <li class="text-sm">All Deluxe amenities</li>
+                <li class="text-sm">Separate living area</li>
+                <li class="text-sm">Nespresso machine</li>
+              </ul>
+            </td>
+            <td class="py-3 px-4">
+              <ul class="list-disc list-inside space-y-1">
+                <li class="text-sm">All Executive amenities</li>
+                <li class="text-sm">Private terrace</li>
+                <li class="text-sm">Jacuzzi</li>
+                <li class="text-sm">Butler service</li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 px-4"></td>
+            <td class="py-3 px-4">
+              <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                Book Now
+              </button>
+            </td>
+            <td class="py-3 px-4">
+              <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                Book Now
+              </button>
+            </td>
+            <td class="py-3 px-4">
+              <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                Book Now
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Price Tracking & Alerts -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-gray-50">
+    <h2 class="text-2xl font-bold mb-6 text-gray-900">Price History & Alerts</h2>
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-semibold">The Leela Goa - Deluxe Room</h3>
+            <p class="text-sm text-gray-600">June 15-20, 2024 • 2 guests</p>
+          </div>
+          <div class="flex items-center space-x-4">
+            <div class="text-right">
+              <p class="text-sm text-gray-600">Current Price</p>
+              <p class="text-xl font-bold text-blue-600">₹8,500 <span class="text-sm font-normal text-gray-500">/ night</span></p>
+            </div>
+            <button class="bg-red-100 hover:bg-red-200 text-red-600 font-medium py-2 px-4 rounded-md flex items-center">
+              <i class="fas fa-bell mr-2"></i>
+              Set Alert
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="font-medium">Price History (Last 30 Days)</h4>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm text-green-600">
+              <i class="fas fa-arrow-down mr-1"></i> 12% drop
+            </span>
+            <span class="text-sm">Lowest: ₹7,500</span>
+          </div>
+        </div>
+        <div class="price-history-chart bg-gray-50 rounded-lg p-4">
+          <!-- This would be a chart in a real implementation -->
+          <div class="flex items-end h-full space-x-1">
+            <div class="bg-blue-200 w-6 h-8" title="Jun 1: ₹9,500"></div>
+            <div class="bg-blue-200 w-6 h-12" title="Jun 5: ₹10,200"></div>
+            <div class="bg-blue-200 w-6 h-16" title="Jun 10: ₹11,000"></div>
+            <div class="bg-blue-200 w-6 h-14" title="Jun 15: ₹10,500"></div>
+            <div class="bg-blue-200 w-6 h-10" title="Jun 20: ₹9,800"></div>
+            <div class="bg-blue-600 w-6 h-8" title="Today: ₹8,500"></div>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 bg-gray-50 border-t border-gray-200">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h4 class="font-medium mb-2">Other Booking Sites</h4>
+            <div class="space-y-3">
+              <div class="flex justify-between">
+                <span class="text-sm">Agoda.com</span>
+                <span class="font-medium">₹8,700</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm">MakeMyTrip</span>
+                <span class="font-medium">₹8,300</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm">Goibibo</span>
+                <span class="font-medium">₹8,600</span>
+              </div>
+            </div>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h4 class="font-medium mb-2">Price Alert</h4>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notify me when price drops below</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-2">₹</span>
+                  <input class="pl-8 border border-gray-300 rounded-md px-3 py-2 w-full" type="number" value="8000"/>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Send alerts to</label>
+                <input class="border border-gray-300 rounded-md px-3 py-2 w-full" placeholder="your@email.com" type="email"/>
+              </div>
+              <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                Create Alert
+              </button>
+            </div>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h4 class="font-medium mb-2">Travel Companion</h4>
+            <p class="text-sm text-gray-600 mb-3">Invite friends to vote on this hotel</p>
+            <div class="flex space-x-2 mb-3">
+              <img alt="User" class="w-8 h-8 rounded-full" src="https://randomuser.me/api/portraits/women/44.jpg"/>
+              <img alt="User" class="w-8 h-8 rounded-full" src="https://randomuser.me/api/portraits/men/32.jpg"/>
+              <button class="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+            <button class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md">
+              Invite Friends
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Enhanced Review Filtering -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h2 class="text-2xl font-bold mb-6 text-gray-900">Guest Reviews</h2>
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div class="mb-4 md:mb-0">
+            <div class="flex items-center">
+              <div class="flex text-yellow-400 mr-2">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star-half-alt"></i>
+              </div>
+              <span class="text-gray-700">4.5 out of 5 • 1,248 reviews</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button class="bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+              <i class="fas fa-wifi mr-1"></i> Fast WiFi
+            </button>
+            <button class="bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+              <i class="fas fa-utensils mr-1"></i> Great Food
+            </button>
+            <button class="bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+              <i class="fas fa-child mr-1"></i> Family Friendly
+            </button>
+            <button class="bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+              <i class="fas fa-swimming-pool mr-1"></i> Nice Pool
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex justify-between mb-2">
+              <div class="font-medium">Sarah K.</div>
+              <div class="text-sm text-gray-500">2 weeks ago</div>
+            </div>
+            <div class="flex text-yellow-400 mb-2">
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+            </div>
+            <h4 class="font-medium mb-1">Perfect family vacation!</h4>
+            <p class="text-gray-700 mb-2">The kids loved the pool and the beach was just steps away. Staff were incredibly friendly and helpful throughout our stay.</p>
+            <div class="flex flex-wrap gap-1">
+              <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Family Friendly</span>
+              <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Great Location</span>
+            </div>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex justify-between mb-2">
+              <div class="font-medium">Raj M.</div>
+              <div class="text-sm text-gray-500">1 month ago</div>
+            </div>
+            <div class="flex text-yellow-400 mb-2">
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="far fa-star"></i>
+            </div>
+            <h4 class="font-medium mb-1">Excellent service but WiFi was spotty</h4>
+            <p class="text-gray-700 mb-2">The staff went above and beyond to make our stay comfortable. Only downside was the WiFi in our room wasn't very reliable.</p>
+            <div class="flex flex-wrap gap-1">
+              <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">Great Service</span>
+              <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Slow WiFi</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6">
+          <button class="w-full bg-white hover:bg-gray-50 text-blue-600 font-medium py-2 px-4 rounded-md border border-gray-300">
+            Show All Reviews
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Local Experiences -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-gray-50">
+    <h2 class="text-2xl font-bold mb-6 text-gray-900">Local Experiences & Events</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+        <img alt="Goa Carnival" class="w-full h-48 object-cover" src="https://storage.googleapis.com/a1aa/image/28e8a07d-abff-4b67-96b4-e4bd7d5eade3.jpg"/>
+        <div class="p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-semibold text-lg">Goa Carnival</h3>
+            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Festival</span>
+          </div>
+          <p class="text-gray-600 text-sm mb-3">June 18-21, 2024 • Panaji, Goa</p>
+          <p class="text-gray-700 mb-4">Colorful parade with music, dance, and floats celebrating Goan culture and heritage.</p>
+          <button class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+            <i class="fas fa-plus-circle mr-2"></i>
+            Add to Itinerary
+          </button>
+        </div>
+      </div>
+      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+        <img alt="Dolphin Watching Tour" class="w-full h-48 object-cover" src="https://storage.googleapis.com/a1aa/image/8c9838de-8867-4668-fb32-ca6aaaef2619.jpg"/>
+        <div class="p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-semibold text-lg">Dolphin Watching Tour</h3>
+            <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Activity</span>
+          </div>
+          <p class="text-gray-600 text-sm mb-3">Daily • 8:00 AM - 11:00 AM • Dona Paula Jetty</p>
+          <p class="text-gray-700 mb-4">2-hour boat tour to spot dolphins in their natural habitat with experienced guides.</p>
+          <button class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+            <i class="fas fa-plus-circle mr-2"></i>
+            Add to Itinerary
+          </button>
+        </div>
+      </div>
+      <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+        <img alt="Spice Plantation Tour" class="w-full h-48 object-cover" src="https://storage.googleapis.com/a1aa/image/87ab14c6-c584-4b53-1f75-44e72b72bd50.jpg"/>
+        <div class="p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-semibold text-lg">Spice Plantation Tour</h3>
+            <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Tour</span>
+          </div>
+          <p class="text-gray-600 text-sm mb-3">Multiple times daily • Ponda, Goa</p>
+          <p class="text-gray-700 mb-4">Explore organic spice farms, learn about cultivation, and enjoy a traditional Goan lunch.</p>
+          <button class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+            <i class="fas fa-plus-circle mr-2"></i>
+            Add to Itinerary
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-blue-900 text-white py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div>
+        <h3 class="font-bold text-lg mb-4">Company</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a class="hover:underline" href="#">About Us</a></li>
+          <li><a class="hover:underline" href="#">Careers</a></li>
+          <li><a class="hover:underline" href="#">Press Center</a></li>
+          <li><a class="hover:underline" href="#">Terms & Conditions</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold text-lg mb-4">Explore</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a class="hover:underline" href="#">Stays</a></li>
+          <li><a class="hover:underline" href="#">Flights</a></li>
+          <li><a class="hover:underline" href="#">Car Rentals</a></li>
+          <li><a class="hover:underline" href="#">Attractions</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold text-lg mb-4">Support</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a class="hover:underline" href="#">Customer Service</a></li>
+          <li><a class="hover:underline" href="#">Safety Resource Center</a></li>
+          <li><a class="hover:underline" href="#">Help Center</a></li>
+          <li><a class="hover:underline" href="#">Cancellation Options</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-bold text-lg mb-4">Contact</h3>
+        <p class="text-sm mb-2">Email: support@bookingclone.com</p>
+        <p class="text-sm mb-2">Phone: +91 98765 43210</p>
+        <div class="flex space-x-4 mt-4">
+          <a aria-label="Facebook" class="hover:text-gray-300" href="#"><i class="fab fa-facebook fa-lg"></i></a>
+          <a aria-label="Twitter" class="hover:text-gray-300" href="#"><i class="fab fa-twitter fa-lg"></i></a>
+          <a aria-label="Instagram" class="hover:text-gray-300" href="#"><i class="fab fa-instagram fa-lg"></i></a>
+          <a aria-label="LinkedIn" class="hover:text-gray-300" href="#"><i class="fab fa-linkedin fa-lg"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 border-t border-blue-800 pt-6 text-center text-sm text-blue-300">
+      © 2024 Booking.com Clone. All rights reserved.
+    </div>
+  </footer>
+
+  <!-- Travel Buddy Chatbot -->
+  <div id="chatbot-container" class="collapsed">
+    <div id="chatbot-header" onclick="toggleChatbot()">
+      <div class="flex items-center">
+        <div class="chatbot-avatar">
+          <i class="fas fa-plane"></i>
+        </div>
+        <span class="font-medium ml-2">Travel Buddy</span>
+      </div>
+      <i class="fas fa-chevron-down" id="chatbot-toggle-icon"></i>
+    </div>
+    <div id="chatbot-body">
+      <div id="chatbot-messages">
+        <div class="chatbot-message bot">
+          <div class="message-content">
+            Hi there! I'm Travel Buddy, your AI travel assistant. How can I help you today?
+            <div class="quick-replies mt-2">
+              <div class="quick-reply" onclick="sendQuickReply('Find hotels in Goa')">Find hotels in Goa</div>
+              <div class="quick-reply" onclick="sendQuickReply('Flight options')">Flight options</div>
+              <div class="quick-reply" onclick="sendQuickReply('Travel tips')">Travel tips</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="chatbot-input">
+        <input type="text" placeholder="Type your message..." id="chatbot-input-field" onkeypress="handleChatbotInput(event)"/>
+        <button onclick="sendChatbotMessage()">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mobile menu toggle
+    const menuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    menuButton.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+
+    // Set min date for check-in and check-out inputs to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('checkin').min = today;
+    document.getElementById('checkout').min = today;
+    document.getElementById('trip-checkin').min = today;
+    document.getElementById('trip-checkout').min = today;
+
+    // Country selector logic
+    const countryButton = document.getElementById('country-button');
+    const countryList = document.getElementById('country-list');
+    const countryLabel = document.getElementById('country-label');
+    const countryFlag = document.getElementById('country-flag');
+    const mobileCountrySelect = document.getElementById('mobile-country-select');
+
+    countryButton.addEventListener('click', () => countryList.classList.toggle('hidden'));
+    countryList.querySelectorAll('li').forEach(item => {
+      item.addEventListener('click', () => {
+        countryLabel.textContent = item.dataset.name;
+        countryFlag.src = item.dataset.flag;
+        countryList.classList.add('hidden');
+        mobileCountrySelect.value = item.dataset.code;
+      });
+    });
+    mobileCountrySelect.addEventListener('change', () => {
+      const selectedOption = mobileCountrySelect.options[mobileCountrySelect.selectedIndex];
+      countryLabel.textContent = selectedOption.text;
+      countryFlag.src = `https://flagcdn.com/w20/${selectedOption.value.toLowerCase()}.png`;
+    });
+
+    // Currency selector logic
+    const currencyButton = document.getElementById('currency-button');
+    const currencyList = document.getElementById('currency-list');
+    const currencyLabel = document.getElementById('currency-label');
+    const mobileCurrencySelect = document.getElementById('mobile-currency-select');
+
+    currencyButton.addEventListener('click', () => currencyList.classList.toggle('hidden'));
+    currencyList.querySelectorAll('li').forEach(item => {
+      item.addEventListener('click', () => {
+        currencyLabel.textContent = item.dataset.code;
+        currencyList.classList.add('hidden');
+        mobileCurrencySelect.value = item.dataset.code;
+        updatePrices(item.dataset.code);
+      });
+    });
+    mobileCurrencySelect.addEventListener('change', () => {
+      currencyLabel.textContent = mobileCurrencySelect.value;
+      updatePrices(mobileCurrencySelect.value);
+    });
+
+    // Currency conversion rates
+    const currencyRates = {
+      USD: 82.3, // 1 USD = 82.3 INR
+      EUR: 89.5, // 1 EUR = 89.5 INR
+      INR: 1
+    };
+
+    // Update all prices on page according to selected currency
+    function updatePrices(currency) {
+      const rate = currencyRates[currency] || 1;
+      const symbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '₹';
+      
+      // Update prices in featured properties
+      document.querySelectorAll('.price-text').forEach(el => {
+        const usdPrice = parseFloat(el.dataset.usdPrice || '100');
+        const convertedPrice = Math.round(usdPrice * rate);
+        el.innerHTML = `${symbol}${convertedPrice.toLocaleString()} <span class="text-base font-normal text-gray-600">/ night</span>`;
+      });
+
+      // Update prices in trip calculator
+      const tripItems = [
+        { selector: '.trip-accommodation', usd: 300 },
+        { selector: '.trip-flights', usd: 150 },
+        { selector: '.trip-food', usd: 100 },
+        { selector: '.trip-activities', usd: 60 },
+        { selector: '.trip-transport', usd: 40 }
+      ];
+      
+      tripItems.forEach(item => {
+        const element = document.querySelector(item.selector);
+        if (element) {
+          const convertedPrice = Math.round(item.usd * rate);
+          element.textContent = `${symbol}${convertedPrice.toLocaleString()}`;
+        }
+      });
+
+      // Update total
+      const totalUsd = 650; // Sum of all trip items
+      const totalConverted = Math.round(totalUsd * rate);
+      document.querySelector('.trip-total').textContent = `${symbol}${totalConverted.toLocaleString()}`;
+
+      // Update room comparison prices
+      const roomPrices = [
+        { selector: '.room-price-1', usd: 100 },
+        { selector: '.room-price-2', usd: 150 },
+        { selector: '.room-price-3', usd: 300 }
+      ];
+      
+      roomPrices.forEach(item => {
+        const element = document.querySelector(item.selector);
+        if (element) {
+          const convertedPrice = Math.round(item.usd * rate);
+          element.textContent = `${symbol}${convertedPrice.toLocaleString()}`;
+        }
+      });
+    }
+
+    // Voice search functionality
+    const voiceSearchBtn = document.getElementById('voice-search-btn');
+    const voiceStatus = document.getElementById('voice-status');
+    const destinationInput = document.getElementById('destination');
+    
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      voiceSearchBtn.addEventListener('click', () => {
+        if (voiceSearchBtn.classList.contains('active')) {
+          recognition.stop();
+          voiceSearchBtn.classList.remove('active');
+          voiceStatus.classList.add('hidden');
+        } else {
+          recognition.start();
+          voiceSearchBtn.classList.add('active');
+          voiceStatus.textContent = 'Listening...';
+          voiceStatus.classList.remove('hidden');
+        }
+      });
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        destinationInput.value = transcript;
+        voiceStatus.textContent = `Recognized: ${transcript}`;
+        voiceSearchBtn.classList.remove('active');
+      };
+      
+      recognition.onerror = (event) => {
+        voiceStatus.textContent = `Error: ${event.error}`;
+        voiceSearchBtn.classList.remove('active');
+        setTimeout(() => voiceStatus.classList.add('hidden'), 3000);
+      };
+      
+      recognition.onend = () => {
+        if (voiceSearchBtn.classList.contains('active')) {
+          voiceSearchBtn.classList.remove('active');
+        }
+      };
+    } else {
+      voiceSearchBtn.style.display = 'none';
+    }
+
+    // AI Recommendations
+    const recommendations = [
+      {
+        title: "Luxury Beach Resort",
+        location: "Goa, India",
+        price: 150,
+        rating: 4.8,
+        image: "https://storage.googleapis.com/a1aa/image/46b9bb23-8dfe-4c67-7020-5b72629759df.jpg",
+        features: ["Private beach", "Spa", "3 pools"]
+      },
+      {
+        title: "Heritage City Hotel",
+        location: "Jaipur, India",
+        price: 85,
+        rating: 4.5,
+        image: "https://storage.googleapis.com/a1aa/image/97dd6c5a-233c-475a-5b4e-f26bc643dc6f.jpg",
+        features: ["Palace architecture", "Rooftop restaurant", "Cultural shows"]
+      },
+      {
+        title: "Mountain View Lodge",
+        location: "Shimla, India",
+        price: 65,
+        rating: 4.3,
+        image: "https://storage.googleapis.com/a1aa/image/b84242bc-b28d-4807-a2a3-b228aaf48a29.jpg",
+        features: ["Panoramic views", "Hiking trails", "Cozy fireplace"]
+      },
+      {
+        title: "Business Hotel",
+        location: "Mumbai, India",
+        price: 120,
+        rating: 4.6,
+        image: "https://storage.googleapis.com/a1aa/image/4964bf8a-b9d8-4ecf-87a4-68105790e5ff.jpg",
+        features: ["City center", "Meeting rooms", "24/7 business center"]
+      }
+    ];
+
+    function renderRecommendations() {
+      const container = document.getElementById('ai-recommendations');
+      container.innerHTML = '';
+      
+      recommendations.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow';
+        card.innerHTML = `
+          <img alt="${item.title}" class="w-full h-48 object-cover" src="${item.image}"/>
+          <div class="p-4">
+            <h3 class="font-semibold text-lg mb-1">${item.title}</h3>
+            <p class="text-gray-600 text-sm mb-2">${item.location}</p>
+            <div class="flex items-center mb-2">
+              <div class="flex text-yellow-400 mr-2">
+                ${Array(Math.floor(item.rating)).fill('<i class="fas fa-star"></i>').join('')}
+                ${item.rating % 1 ? '<i class="fas fa-star-half-alt"></i>' : ''}
+              </div>
+              <span class="text-sm text-gray-600">${item.rating}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <p class="text-lg font-bold text-blue-700 price-text" data-usd-price="${item.price}">
+                ₹${Math.round(item.price * 82.3).toLocaleString()}
+                <span class="text-base font-normal text-gray-600">/ night</span>
+              </p>
+              <button class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-1">
+              ${item.features.map(feat => `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${feat}</span>`).join('')}
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    document.getElementById('refresh-recommendations').addEventListener('click', () => {
+      // In a real app, this would fetch new recommendations from an API
+      renderRecommendations();
+    });
+
+    // Itinerary drag and drop
+    const itineraryContainer = document.getElementById('itinerary-container');
+    let draggedItem = null;
+
+    document.querySelectorAll('.itinerary-item').forEach(item => {
+      item.addEventListener('dragstart', function() {
+        draggedItem = this;
+        setTimeout(() => this.classList.add('dragging'), 0);
+      });
+
+      item.addEventListener('dragend', function() {
+        this.classList.remove('dragging');
+      });
+    });
+    itineraryContainer.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(this, e.clientY);
+      if (afterElement == null) {
+        this.appendChild(draggedItem);
+      } else {
+        this.insertBefore(draggedItem, afterElement);
+      }
+    });
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll('.itinerary-item:not(.dragging)')];
+      
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+    itineraryContainer.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(this, e.clientY);
+      if (afterElement == null) {
+        this.appendChild(draggedItem);
+      } else {
+        this.insertBefore(draggedItem, afterElement);
+      }
+    });
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll('.itinerary-item:not(.dragging)')];
+      
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // Chatbot functionality
+    function toggleChatbot() {
+      const chatbot = document.getElementById('chatbot-container');
+      const icon = document.getElementById('chatbot-toggle-icon');
+      
+      chatbot.classList.toggle('collapsed');
+      
+      if (chatbot.classList.contains('collapsed')) {
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+      } else {
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+      }
+    }
+
+    function sendChatbotMessage() {
+      const inputField = document.getElementById('chatbot-input-field');
+      const message = inputField.value.trim();
+      
+      if (message) {
+        addUserMessage(message);
+        inputField.value = '';
+        
+        // Simulate bot response after a short delay
+        setTimeout(() => {
+          const botResponse = getBotResponse(message);
+          addBotMessage(botResponse);
+        }, 800);
+      }
+    }
+
+    function handleChatbotInput(event) {
+      if (event.key === 'Enter') {
+        sendChatbotMessage();
+      }
+    }
+
+    function sendQuickReply(text) {
+      addUserMessage(text);
+      
+      // Simulate bot response after a short delay
+      setTimeout(() => {
+        const botResponse = getBotResponse(text);
+        addBotMessage(botResponse);
+      }, 800);
+    }
+
+    function addUserMessage(text) {
+      const messagesContainer = document.getElementById('chatbot-messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'chatbot-message user';
+      messageDiv.innerHTML = `
+        <div class="message-content">${text}</div>
+      `;
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function addBotMessage(text) {
+      const messagesContainer = document.getElementById('chatbot-messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'chatbot-message bot';
+      
+      // Check if the response should include quick replies
+      if (typeof text === 'object') {
+        messageDiv.innerHTML = `
+          <div class="message-content">
+            ${text.text}
+            <div class="quick-replies mt-2">
+              ${text.quickReplies.map(reply => `<div class="quick-reply" onclick="sendQuickReply('${reply}')">${reply}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        messageDiv.innerHTML = `
+          <div class="message-content">${text}</div>
+        `;
+      }
+      
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function getBotResponse(userMessage) {
+      const lowerMessage = userMessage.toLowerCase();
+      
+      if (lowerMessage.includes('hotel') || lowerMessage.includes('stay') || lowerMessage.includes('accommodation')) {
+        if (lowerMessage.includes('goa')) {
+          return {
+            text: "Here are some great hotel options in Goa:",
+            quickReplies: ["Luxury resorts in Goa", "Budget hotels in Goa", "Beachfront properties"]
+          };
+        } else if (lowerMessage.includes('delhi')) {
+          return {
+            text: "Here are some recommended hotels in Delhi:",
+            quickReplies: ["5-star hotels in Delhi", "Hotels near airport", "Budget stays"]
+          };
+        } else {
+          return {
+            text: "I can help you find hotels in any destination. Where would you like to stay?",
+            quickReplies: ["Goa", "Delhi", "Mumbai", "Bangalore"]
+          };
+        }
+      } else if (lowerMessage.includes('flight') || lowerMessage.includes('airline') || lowerMessage.includes('airport')) {
+        return {
+          text: "I can check flight options for you. Please tell me your departure city, destination, and travel dates.",
+          quickReplies: ["Flights from Mumbai to Goa", "Cheapest flights", "International flights"]
+        };
+      } else if (lowerMessage.includes('price') || lowerMessage.includes('cost') || lowerMessage.includes('expensive')) {
+        return "Prices vary depending on season and availability. For the best deals, I recommend booking at least 2-3 months in advance. Would you like me to check current prices for a specific hotel or flight?";
+      } else if (lowerMessage.includes('activity') || lowerMessage.includes('things to do') || lowerMessage.includes('attraction')) {
+        return {
+          text: "Every destination has unique activities! Here are some popular options:",
+          quickReplies: ["Adventure activities", "Cultural experiences", "Food tours", "Sightseeing"]
+        };
+      } else if (lowerMessage.includes('tip') || lowerMessage.includes('advice') || lowerMessage.includes('recommendation')) {
+        return {
+          text: "Here are some general travel tips:",
+          quickReplies: ["Packing tips", "Safety advice", "Budget travel tips", "Family travel"]
+        };
+      } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+        return {
+          text: "Hello! I'm Travel Buddy, your AI travel assistant. How can I help you plan your trip today?",
+          quickReplies: ["Find hotels", "Flight options", "Travel tips", "Local experiences"]
+        };
+      } else {
+        return "I'm here to help with your travel plans! You can ask me about hotels, flights, activities, or travel tips. What would you like to know?";
+      }
+    }
+
+    // Initialize everything when DOM is loaded
+    window.addEventListener('DOMContentLoaded', () => {
+      // Set default dates
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      document.getElementById('checkin').valueAsDate = today;
+      document.getElementById('checkout').valueAsDate = tomorrow;
+      document.getElementById('trip-checkin').valueAsDate = today;
+      document.getElementById('trip-checkout').valueAsDate = tomorrow;
+      
+      // Render AI recommendations
+      renderRecommendations();
+      
+      // Set currency to INR initially
+      updatePrices('INR');
+    });
+  </script>
+</body>
+</html>
